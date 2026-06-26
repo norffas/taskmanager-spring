@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 
 @Component
@@ -28,33 +29,43 @@ public class TaskService {
         if(!isValidDescription(description))
             return new TaskServiceOperationResult(OperationStatus.NOT_ADDED_INVALID_DESCRIPTION, null);
         Task task = new Task(description);
-        task = repo.saveTask(task);
+        task = repo.save(task);
         return new TaskServiceOperationResult(OperationStatus.ADDED, task);
     }
 
-    public Task findTaskById(int id) {
-        return repo.findTaskById(id);
+    public Optional<Task> findTaskById(int id) {
+        return repo.findById(id);
     }
 
     public synchronized TaskServiceOperationResult deleteTask(int id){
-        Task task = repo.deleteTaskById(id);
-        if(task == null)
-            return new TaskServiceOperationResult(OperationStatus.NOT_FOUND, null);
-        else
+        Task task;
+        Optional<Task> optionalTask = findTaskById(id);
+        if(optionalTask.isPresent()){
+            task = optionalTask.get();
+            repo.deleteById(id);
             return new TaskServiceOperationResult(OperationStatus.DELETED_NOW, task);
+        }
+        else{
+            return new TaskServiceOperationResult(OperationStatus.NOT_FOUND, null);
+        }
     }
 
     public synchronized TaskServiceOperationResult completeTask(int id){
-        Task task = repo.findTaskById(id);
-        if(task == null)
-            return new TaskServiceOperationResult(OperationStatus.NOT_FOUND, task);
-        else if(task.isCompleted())
-            return new TaskServiceOperationResult(OperationStatus.ALREADY_COMPLETED, task);
-        task = repo.update(id, TaskStatus.COMPLETED);
-        if (task == null) {
+        Optional<Task> optionalTask = repo.findById(id);
+        Task task;
+        if(optionalTask.isPresent()){
+            task = optionalTask.get();
+            if(task.isCompleted())
+                return new TaskServiceOperationResult(OperationStatus.ALREADY_COMPLETED, task);
+            else{
+                task.complete();
+                repo.save(task);
+                return new TaskServiceOperationResult(OperationStatus.COMPLETED_NOW, task);
+            }
+        }
+        else{
             return new TaskServiceOperationResult(OperationStatus.NOT_FOUND, null);
         }
-        return new TaskServiceOperationResult(OperationStatus.COMPLETED_NOW, task);
     }
 
     public synchronized int updateAbandonedStatus() {
@@ -66,15 +77,15 @@ public class TaskService {
     }
 
     public synchronized List<Task> getCompletedTasks(){
-        return repo.findTasksByStatus(TaskStatus.COMPLETED);
+        return repo.findByStatus(TaskStatus.COMPLETED);
     }
 
     public synchronized List<Task> getPendingTasks(){
-        return repo.findTasksByStatus(TaskStatus.PENDING);
+        return repo.findByStatus(TaskStatus.PENDING);
     }
 
     public synchronized List<Task> getAbandonedTasks(){
-        return repo.findTasksByStatus(TaskStatus.ABANDONED);
+        return repo.findByStatus(TaskStatus.ABANDONED);
     }
 
     private boolean isValidDescription(String description){

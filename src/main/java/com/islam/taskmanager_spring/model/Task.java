@@ -1,10 +1,19 @@
 package com.islam.taskmanager_spring.model;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
+
 import java.time.LocalDateTime;
 
+
+@Table("tasks")
 public class Task {
+    @Id
     private final Integer id;
     private final String description;
+    @Column("task_status")
     private TaskStatus status;
     private final LocalDateTime createdAt;
 
@@ -23,6 +32,7 @@ public class Task {
         this.createdAt = LocalDateTime.now();
     }
 
+    @PersistenceCreator
     public Task(int id, String description, TaskStatus status, LocalDateTime createdAt){
         this.id = id;
         this.description = description;
